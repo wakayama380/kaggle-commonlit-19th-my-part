@@ -1,55 +1,44 @@
-<h2>最終モデル</h2>
-
-<p>最終提出用に、異なる特徴と重みを</p>
+<h1>19th-Place-Solution<h1>
+<h2>Final Model</h2>
+<p>For the final submission, different features and weights were used:</p>
 <ul>
-  <li>Sub1 (TrustLB) LB:0.422 / CV:0.463-0.465 (異なるCV計算方法)</li>
+  <li>Sub1 (TrustLB) LB:0.422 / CV:0.463-0.465 (using a different CV calculation method)</li>
   <li>Sub2 (TrustCV) LB:0.448 / CV:0.458</li>
   <li>Sub3 (Balance) LB:0.441 / CV:0.460</li>
 </ul>
-
 <h2>Transformer</h2>
-
-<h3>pao モデル</h3>
 <ul>
-  <li>凍結レイヤー</li>
-  <li>訓練前に deberta-v3-large の埋め込みを最終層に連結 (model-p1 のみ)</li>
-  <li>CLS トークンを使用した予測</li>
-  <li>ウォームアップ付きのリニアスケジューラ、3エポック</li>
+  <li>Frozen layers</li>
+  <li>Concatenation of deberta-v3-large embeddings to the final layer before training (only for model-p1)</li>
+  <li>Prediction using CLS tokens</li>
+  <li>Linear scheduler with warm-up, 3 epochs</li>
 </ul>
-
-<h3>takai モデル</h3>
 <ul>
-  <li>凍結レイヤー</li>
-  <li>concat pooling (複数のレイヤーの cls トークンを連結)</li>
+  <li>Frozen layers</li>
+  <li>Concat pooling (concatenating cls tokens from multiple layers)</li>
 </ul>
-
 <h2>LightGBM</h2>
-
-<p>最終的には約80の特徴量があります。各Transformerモデルについて10シード x 4 folds のLightGBM Averageが行われます。特徴を追加する際は、50シードの平均スコアからCVが改善されたかを確認します。</p>
-
-<h2>特徴</h2>
-
-<p>公開ノートブックからの特徴:</p>
+<p>Ultimately, about 80 features were used. For each Transformer model, 10 seeds x 4 folds of LightGBM Average were calculated. When adding features, improvements in CV from a 50-seed average were checked.</p>
+<h2>Features</h2>
+<p>Features from public notebooks:</p>
 <ul>
-  <li>質問/prompt_text と summary_text の Jaccard 係数。</li>
-  <li>promptごとにsummary_textのtfidfを計算し、レコードごとの平均tfidfを取得。</li>
-  <li>全てのsummary_textとprompt_textに含まれない単語のみ。</li>
-  <li>全列の平均と非ゼロ要素の平均を取る。</li>
-  <li>promptごとのsummary_textの平均tfidf/BoWのcosine similarity。</li>
-  <li>Sentence Transformer埋め込み特徴量。</li>
-  <li>prompt_textとsummary_textのcosine similarity。</li>
-  <li>質問とsummary_textのcosine similarity。</li>
-  <li>promptごとのsummary_textの平均埋め込みのcosine similarity。</li>
-  <li>prompt_textから分割された文の埋め込みとsummary_textの間のcosine similarityを計算し、すべての文の類似度の標準偏差を取得。</li>
-  <li>同様に、summary_textから分割された文の埋め込みとprompt_textの間のcosine similarityを計算し、すべての文の類似度の標準偏差を取得。</li>
-  <li>promptごとに、summary_textの埋め込みでkNNを行います。</li>
-  <li>各レコードに対して高い類似度を持つトップ5%のoof特徴量の平均とcosine similarityを抽出します。</li>
-  <li>全てのBERTスコアと埋め込み特徴量について、長いプロンプトからテキストを抽出して平均を取ります。</li>
-  <li>フィードバックコンペティション3のモデルからの予測値を特徴量として含みます。</li>
-  <li>pyreadabilityからの特徴量。</li>
-  <li>summary_textにのみ存在し、prompt_textに存在しない単語の一般頻度の平均。</li>
+  <li>Jaccard coefficient between question/prompt_text and summary_text.</li>
+  <li>Calculate tfidf for summary_text per prompt, and take the average tfidf per record.</li>
+  <li>Include only words not in prompt_text.</li>
+  <li>Take the average of all columns and the average of non-zero elements.</li>
+  <li>Cosine similarity of average tfidf/BoW of summary_text per prompt.</li>
+  <li>Sentence Transformer embedding features.</li>
+  <li>Cosine similarity between prompt_text and summary_text.</li>
+  <li>Cosine similarity between question and summary_text.</li>
+  <li>Cosine similarity between average embedding of summary_text per prompt.</li>
+  <li>Calculate cosine similarity between embeddings of sentences split from prompt_text and summary_text, and take the standard deviation of similarity for all sentences.</li>
+  <li>Similarly, calculate cosine similarity between embeddings of sentences split from summary_text and prompt_text, and take the standard deviation of similarity for all sentences.</li>
+  <li>For each prompt, perform kNN with the embedding of summary_text.</li>
+  <li>Extract features and cosine similarity of the top 5% of oof features with high similarity for each record.</li>
+  <li>Take the average of BERT scores and embedding features by extracting text from the beginning, middle, and end for long prompts.</li>
+  <li>Include prediction values from Feedback competition 3 models as features.</li>
+  <li>Features from pyreadability.</li>
+  <li>Take the average general frequency of words present only in summary_text and not in prompt_text for each summary_text.</li>
 </ul>
-
-<h2>アンサンブル</h2>
-
-<p>Nelder-Meadを使用した重み最適化。最終的には0より大きい重みのみを使用し、合計が1.0になるように丸めます。summary_text + prompt_textのトークン数に応じてアンサンブルの重みを変更します。特定のトークン数以上の場合は、生のTransformerの予測値の重みを減らし、LightGBMの重みを増やします（トークン数に応じて重みを線形に調整）。トークン数が高い場合、prompt_textが完全にTransformerに適合せず、精度が低下すると仮定されています。</p>
+<h2>Ensemble</h2>
+<p>Weight optimization was done using Nelder-Mead. Only weights above 0 were used, and they were rounded to a total of 1.0. Ensemble weights were changed according to the token count of summary_text + prompt_text. For token counts above a certain threshold, the weight of raw Transformer predictions was gradually reduced, and the weight of LightGBM was increased (linearly adjusted by token count). It was assumed that when the token count is high, the prompt_text does not fit entirely in the Transformer with prompt_text input, reducing accuracy.</p>
