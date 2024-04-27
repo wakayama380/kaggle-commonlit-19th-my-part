@@ -1,71 +1,55 @@
-Overview
-A two-stage structure with the 1st stage being a Transformer and the 2nd stage being a GBDT (LightGBM).
-For the 2nd stage GBDT, a model is created for each out-of-fold (oof) of the Transformer, and finally, a Weighted Average is taken.
-Some raw prediction values from the Transformers are also included in the final Weighted Average.
-Adjust the weight according to the total token count of summary_text and prompt_text.
-overview
+<h2>最終モデル</h2>
 
-Final Model
-Three models with different features and weights were selected for the final submission:
+<p>最終提出用に、異なる特徴と重みを</p>
+<ul>
+  <li>Sub1 (TrustLB) LB:0.422 / CV:0.463-0.465 (異なるCV計算方法)</li>
+  <li>Sub2 (TrustCV) LB:0.448 / CV:0.458</li>
+  <li>Sub3 (Balance) LB:0.441 / CV:0.460</li>
+</ul>
 
-Sub1 (TrustLB) LB:0.422 / CV:0.463-0.465 (Different CV calculation method)
-Sub2 (TrustCV) LB:0.448 / CV:0.458
-Sub3 (Balance) LB:0.441 / CV:0.460
-Transformer
-pao
-model-p1: deberta-v3-large (question + summary_text)
-model-p2: deberta-v2-xlarge (question + summary_text)
-takai
-model-t1: deberta-v3-large (question + summary_text)
-model-t2: deberta-v3-large (question + summary_text)
-model-t3: deberta-v3-large (summary_text + prompt_text)
-model-t4: deberta-v3-large (summary_text + question + prompt_text)
-Predictions from model-t3 and t4 are also used in the final ensemble.
-Model with prompt_text is strong, but it takes long time to inference, so just 2 models.
+<h2>Transformer</h2>
 
-For pao model:
-Freezing layer
-Concatenate the embedding of deberta-v3-large before training to the final layer (only for model-p1)
-Prediction using CLS token
-Linear scheduler with warmup, 3 epochs
-For takai model'
-Freezing layer
-concat pooling (concat multiple layer cls tokens)
-LightGBM
-Ultimately, about 80 features.
-10 seeds x 4 folds of LightGBM Average for each Transformer model.
-To add features, check if the CV is improved with a score from a 50 seed average.
-Features
-From public notebooks: (great thanks to @nogawanogawa)
-https://www.kaggle.com/code/tsunotsuno/updated-debertav3-lgbm-with-feature-engineering
-Jaccard coefficient between question/prompt_text and summary_text.
-Calculate tfidf for summary_text per prompt, and take the average tfidf per record.
-For all of summary_text and only words not in prompt_text.
-Taking average of all columns and average of non-zero elements.
-Cosine similarity of average tfidf/BoW of summary_text per prompt.
-Sentence Transformer embedding features.
-Cosine similarity between prompt_text and summary_text.
-Cosine similarity between question and summary_text.
-Cosine similarity between average embedding of summary_text per prompt.
-Calculate cosine similarity between embeddings of sentences split from prompt_text and summary_text, and take the standard deviation of similarity for all sentences.
-Similarly, calculate cosine similarity between embeddings of sentences split from summary_text and prompt_text, and take the standard deviation of similarity for all sentences.
-kNN-based features.
-For each prompt, kNN with the embedding of summary_text.
-Feature extraction of the average and cosine similarity of the top 5% of oof features with high similarity for each record.
-The average of oof features also includes the difference from the average oof features per prompt.
-Text similarity metrics:
-BERT Score
-ROUGE
-BLEU
-Learning Word2Vec with prompt_text for each prompt. Cosine similarity of the vectors of prompt_text and summary_text.
-Include prediction values from the model of Feedback competition 3 as features.
-https://www.kaggle.com/code/yasufuminakama/fb3-deberta-v3-base-baseline-inference?scriptVersionId=104649006
-Features from pyreadability.
-Average the general frequency of words present only in summary_text and not in prompt_text for each summary_text.
-For bert_score and embedding features, the average embedding was taken from extracting text from the beginning, middle, and end for long prompts.
-Ensemble
-Weight optimization using Nelder-Mead.
-Ultimately, only use those above 0 and round to a total of 1.0.
-Change ensemble weights according to the token count of summary_text + prompt_text.
-For those with a certain number of tokens or more, gradually reduce the weight of raw Transformer predictions and increase the weight of LightGBM (linearly adjust the weight by token count).
-It is assumed that when the token count is high, the prompt_text does not fit entirely in the Transformer with prompt_text input, reducing accuracy.
+<h3>pao モデル</h3>
+<ul>
+  <li>凍結レイヤー</li>
+  <li>訓練前に deberta-v3-large の埋め込みを最終層に連結 (model-p1 のみ)</li>
+  <li>CLS トークンを使用した予測</li>
+  <li>ウォームアップ付きのリニアスケジューラ、3エポック</li>
+</ul>
+
+<h3>takai モデル</h3>
+<ul>
+  <li>凍結レイヤー</li>
+  <li>concat pooling (複数のレイヤーの cls トークンを連結)</li>
+</ul>
+
+<h2>LightGBM</h2>
+
+<p>最終的には約80の特徴量があります。各Transformerモデルについて10シード x 4 folds のLightGBM Averageが行われます。特徴を追加する際は、50シードの平均スコアからCVが改善されたかを確認します。</p>
+
+<h2>特徴</h2>
+
+<p>公開ノートブックからの特徴:</p>
+<ul>
+  <li>質問/prompt_text と summary_text の Jaccard 係数。</li>
+  <li>promptごとにsummary_textのtfidfを計算し、レコードごとの平均tfidfを取得。</li>
+  <li>全てのsummary_textとprompt_textに含まれない単語のみ。</li>
+  <li>全列の平均と非ゼロ要素の平均を取る。</li>
+  <li>promptごとのsummary_textの平均tfidf/BoWのcosine similarity。</li>
+  <li>Sentence Transformer埋め込み特徴量。</li>
+  <li>prompt_textとsummary_textのcosine similarity。</li>
+  <li>質問とsummary_textのcosine similarity。</li>
+  <li>promptごとのsummary_textの平均埋め込みのcosine similarity。</li>
+  <li>prompt_textから分割された文の埋め込みとsummary_textの間のcosine similarityを計算し、すべての文の類似度の標準偏差を取得。</li>
+  <li>同様に、summary_textから分割された文の埋め込みとprompt_textの間のcosine similarityを計算し、すべての文の類似度の標準偏差を取得。</li>
+  <li>promptごとに、summary_textの埋め込みでkNNを行います。</li>
+  <li>各レコードに対して高い類似度を持つトップ5%のoof特徴量の平均とcosine similarityを抽出します。</li>
+  <li>全てのBERTスコアと埋め込み特徴量について、長いプロンプトからテキストを抽出して平均を取ります。</li>
+  <li>フィードバックコンペティション3のモデルからの予測値を特徴量として含みます。</li>
+  <li>pyreadabilityからの特徴量。</li>
+  <li>summary_textにのみ存在し、prompt_textに存在しない単語の一般頻度の平均。</li>
+</ul>
+
+<h2>アンサンブル</h2>
+
+<p>Nelder-Meadを使用した重み最適化。最終的には0より大きい重みのみを使用し、合計が1.0になるように丸めます。summary_text + prompt_textのトークン数に応じてアンサンブルの重みを変更します。特定のトークン数以上の場合は、生のTransformerの予測値の重みを減らし、LightGBMの重みを増やします（トークン数に応じて重みを線形に調整）。トークン数が高い場合、prompt_textが完全にTransformerに適合せず、精度が低下すると仮定されています。</p>
