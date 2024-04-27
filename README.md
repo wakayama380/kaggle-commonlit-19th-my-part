@@ -42,3 +42,6 @@
 </ul>
 <h2>Ensemble</h2>
 <p>Weight optimization was done using Nelder-Mead. Only weights above 0 were used, and they were rounded to a total of 1.0. Ensemble weights were changed according to the token count of summary_text + prompt_text. For token counts above a certain threshold, the weight of raw Transformer predictions was gradually reduced, and the weight of LightGBM was increased (linearly adjusted by token count). It was assumed that when the token count is high, the prompt_text does not fit entirely in the Transformer with prompt_text input, reducing accuracy.</p>
+
+
+![image](https://github.com/wakayama380/kaggle-commonlit-19th-my-part/assets/96282801/ef35ccdf-838f-4189-a6d7-e8cafafbce55)
